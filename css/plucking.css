@@ -1,0 +1,23 @@
+body {
+	background-color: lightgray;
+}
+#container {
+	width:950px;
+	margin-left:auto;
+	margin-right:auto;
+	margin-top:100px;
+}
+#label {
+	text-align:center;
+	margin:50px 0px;
+	color:darkgray;
+	font-size:32pt;
+	font-family:helvetica,arial,sans-serif;
+}
+pre {
+	background-color:darkgray;
+	padding:15px;
+}
+h3 {
+	font-family: garamond, 'EB Garamond', serif;
+}
