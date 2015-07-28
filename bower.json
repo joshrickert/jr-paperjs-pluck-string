@@ -1,0 +1,27 @@
+{
+  "name": "jr-paperjs-pluck-string",
+  "version": "1.0.0",
+  "homepage": "https://github.com/joshrickert/pluck",
+  "authors": [
+    "Josh Rickert <rickertjosh@gmail.com>"
+  ],
+  "description": "HTML5 plucking string based on Paper.js",
+  "main": "js/plucking.js",
+  "keywords": [
+    "paperjs",
+    "string",
+    "guitar",
+    "pluck",
+    "instrument",
+    "sound",
+    "music"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
