@@ -3,6 +3,8 @@
  * @param {string} options.elementId - ID of the canvas DOM element on which to initiate the plucking string
  * @param {number|function} options.width - Width of the container, or a callback for determining the width of the container
  * @param {number|function} options.height - Height of the container, or a callback for determining the height of the container
+ * @param {string} options.templatePath - URL or path from compiled client-side JS to this package, for loading sounds,
+ *   with a trailing slash.
  */
 function pluckString(options) {
   /**
@@ -47,8 +49,7 @@ function pluckString(options) {
   * Set the string in motion and play the appropriate sound.
   */
   function releaseString(event) {
-    if (line.segments[1].point.y !== h/2 &&
-      !paper.view.responds('frame')) {
+    if (line.segments[1].point.y !== h/2 && !paper.view.responds('frame')) {
       // Play the sound
       var amplitude = (Math.abs(line.segments[1].point.y - (h/2))) / (h/2);
 
@@ -79,7 +80,7 @@ function pluckString(options) {
   /**
   * Simulate the vibration of the string. Event handler for onFrame.
   */
- var vibrateString = _.throttle(function (event) {
+  var vibrateString = _.throttle(function (event) {
     var amplitude = Math.abs(line.segments[1].point.y - (h/2));
     if (amplitude > 1) {
       // Move the closer to the center
@@ -90,7 +91,7 @@ function pluckString(options) {
 
       endVibration();
     }
-  }, 16.67);
+  }, 16);
 
   /**
   * Set the global coordinate vars.
@@ -111,12 +112,15 @@ function pluckString(options) {
     MIN_VOLUME: 0.3
   };
 
+  if (_.isUndefined(options.templateUrl))
+    options.templateUrl = '';
+
   // Set up Howler.js
   var sound = new Howl({
     urls: [
-      wordpressData.templateUrl + '/assets/sounds/pluck.ogg',
-      wordpressData.templateUrl + '/assets/sounds/pluck.mp3',
-      wordpressData.templateUrl + '/assets/sounds/pluck.wav'
+      options.templateUrl + 'sounds/pluck.ogg',
+      options.templateUrl + 'sounds/pluck.mp3',
+      options.templateUrl + 'sounds/pluck.wav'
     ],
     sprite: {
       short: [0, 672],
