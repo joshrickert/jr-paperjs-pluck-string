@@ -1,152 +1,40 @@
 <!DOCTYPE html>
 <html>
-<head>
-	<meta charset="UTF-8">
-	<!-- Load Libraries -->
-	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js" /></script>
-	<script type="text/javascript" src="js/modernizr-latest.js" /></script>
-	<script type="text/javascript" src="js/paper-core.min.js" /></script>
-	
-	<!-- Load custom script and CSS -->
-	<script type="text/javascript" src="js/plucking.js"></script>
-	
-	<link href='http://fonts.googleapis.com/css?family=EB+Garamond' rel='stylesheet' type='text/css'>
-	<link rel="stylesheet" type="text/css" href="css/plucking.css">
-	
-	<title>Touch the Line</title>
-</head>
-<body>
-	<div id="container">
-	<img src="img/masthead-logo.svg" /><canvas id="masthead-canvas" width="635" height="115"></canvas>
-	<p id="label">Touch the line!</p>
-	<h3>Source - <a href="https://github.com/joshrickert/pluck">View on Github</a></h3>
-	<pre>//-----------------------------------------
-// Canvas plucking script based on Paper.js
-// By Josh Rickert 2013
-// joshrickert.com
-//
-// Known Issues:
-// Paper.js breaks scrolling on iOS
-// Works best on Chrome, usually works on Firefox, and appears to produce no sound at all on Safari.
-// Untested on IE.
-//-----------------------------------------
-	
-// Load up our audio
-var pluckShort = new Audio();
-pluckShort.src = Modernizr.audio.ogg ? 'snd/pluck1.ogg' : 'snd/pluck1.aac';
-pluckShort.preload = "auto";
-var pluckLong = new Audio();
-pluckLong.src = Modernizr.audio.ogg ? 'snd/pluck2.ogg' : 'snd/pluck2.aac';
-pluckLong.preload = "auto";
-	
-// Setup paper
-paper.setup(document.getElementById('masthead-canvas'));
-var mouseTool = new paper.Tool();
+  <head>
+    <meta charset="UTF-8">
+    <script src="bower_components/howler/howler.js"></script>
+    <script src="bower_components/paper/dist/paper-core.min.js"></script>
+    <script src="bower_components/lodash/lodash.js"></script>
+    <script src="pluck.js"></script>
 
-// Set up our parameters
-var width = paper.view.size.width;
-var height = paper.view.size.height;
-var lineWeight = 5;
-var friction = 0.94;
-var grabbingLeeway = 10;
-var shortSoundThreshold = 0.25;
-var minVolume = 0.3;
+    <style>
+      .container {
+        width:950px;
+        margin-left:auto;
+        margin-right:auto;
+        margin-top:100px;
+      }
+    </style>
 
-// Create a Paper.js Path to draw a line into it:
-var pluckingString = new paper.Path();
-
-// Give the stroke a color and a width
-pluckingString.strokeColor = 'black';
-pluckingString.strokeWidth = lineWeight;
-
-// Create two endpoints and a middle one to pluck
-pluckingString.add(new paper.Point(0,height/2));
-pluckingString.add(new paper.Point(width/2,height/2));
-pluckingString.add(new paper.Point(width,height/2));
-
-// Set out handles so it all stays nice and smooth
-pluckingString.segments[0].handleOut.x = 100;
-pluckingString.segments[1].handleIn.x = -150;
-pluckingString.segments[1].handleOut.x = 150;
-pluckingString.segments[2].handleIn.x = -100;
-
-// This is how we will detect the plucking motion
-var stringGrabbed = false;
-
-// And let's make sure we don't double up on sounds
-var soundPlaying = false;
-
-mouseTool.onMouseMove = function(event) {
-	if (event.point.y > lineWeight &&
-	event.point.y < height - lineWeight &&
-	event.point.x > 0 &&
-	event.point.x < width &&
-	Math.abs(event.point.y - pluckingString.segments[1].point.y) < grabbingLeeway) {
-		stringGrabbed = true;
-	} else {
-		stringGrabbed = false;			
-	}
-	
-	if (stringGrabbed) { pluckingString.segments[1].point.y = event.point.y; }
-}
-
-mouseTool.onMouseOut = function(event) {
-	stringGrabbed = false;
-}
-
-mouseTool.onMouseUp = function(event) {
-	stringGrabbed = false;
-}
-
-function muteSound(sound) {
-	//$(sound).animate({volume: 0}, 10);
-	
-	if (!sound.paused) {
-		sound.pause();
-		if(sound.readyState != 0) {
-			sound.currentTime = 0;
-		} else {
-			$(sound).on('loadedmetadata', function() {
-				sound.currentTime = 0;
-			});
-		}
-	}
-}
-
-paper.view.onFrame = function(event) {
-	if (!stringGrabbed) {
-		var amplitude = Math.abs(pluckingString.segments[1].point.y - (height/2));
-		if (amplitude > 1) {
-			pluckingString.segments[1].point.y = 0.5 * height * (friction + 1) -
-			(friction * pluckingString.segments[1].point.y);
-			
-			if (!soundPlaying) {
-				var sound;
-				var amplitudePercentage = amplitude / (height/2);
-				if (amplitudePercentage < shortSoundThreshold) {
-					sound = pluckShort;
-				} else {
-					sound = pluckLong;
-				}
-				
-				//$(sound).stop(true);
-				sound.volume = (1-minVolume) * amplitudePercentage
-				* amplitudePercentage + (minVolume);
-				sound.play();
-				
-				soundPlaying = true;
-			}	
-		} else {
-			pluckingString.segments[1].point.y = height/2;
-		}
-	} else if (soundPlaying) {
-		muteSound(pluckShort);
-		muteSound(pluckLong);
-		soundPlaying = false;
-	}
-}
-</pre>
-	</div>
-</svg>
-</body>
+    <script>
+      $.ready(function() {
+        pluckString({
+          elementId: 'pluck-canvas',
+          width: function() {
+            return 950;
+          },
+          height: 155
+        });
+      });
+    </script>
+    <link rel="stylesheet" type="text/css" href="css/plucking.css" />
+    
+    <title>Pluck</title>
+  </head>
+  <body>
+    <h1>Touch the line!</h1>
+    <div class="container">
+      <canvas id="pluck-canvas" width="635" height="115"></canvas>
+    </div>
+  </body>
 </html>
