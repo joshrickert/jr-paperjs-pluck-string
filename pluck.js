@@ -3,7 +3,7 @@
  * @param {string} options.elementId - ID of the canvas DOM element on which to initiate the plucking string
  * @param {number|function} options.width - Width of the container, or a callback for determining the width of the container
  * @param {number|function} options.height - Height of the container, or a callback for determining the height of the container
- * @param {string} options.templatePath - URL or path from compiled client-side JS to this package, for loading sounds,
+ * @param {string} options.scriptPath - URL or path from compiled client-side JS to this package, for loading sounds,
  *   with a trailing slash.
  */
 function pluckString(options) {
@@ -112,15 +112,15 @@ function pluckString(options) {
     MIN_VOLUME: 0.3
   };
 
-  if (_.isUndefined(options.templateUrl))
-    options.templateUrl = '';
+  if (_.isUndefined(options.scriptPath))
+    options.scriptPath = '';
 
   // Set up Howler.js
   var sound = new Howl({
     urls: [
-      options.templateUrl + 'sounds/pluck.ogg',
-      options.templateUrl + 'sounds/pluck.mp3',
-      options.templateUrl + 'sounds/pluck.wav'
+      options.scriptPath + 'sounds/pluck.ogg',
+      options.scriptPath + 'sounds/pluck.mp3',
+      options.scriptPath + 'sounds/pluck.wav'
     ],
     sprite: {
       short: [0, 672],
