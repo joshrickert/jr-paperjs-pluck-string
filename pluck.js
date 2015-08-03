@@ -8,26 +8,68 @@
  */
 function pluckString(options) {
   /**
+   * Physics and UI constants
+   * @type {Object}
+   */
+  var constants = {
+    FRICTION: 0.94,
+    HANDLE_SIZE: 10,
+    SHORT_SOUND_THRESHOLD: 0.25,
+    MIN_VOLUME: 0.3
+  };
+
+  /**
+   * Canvas on which to render the string
+   * @type {HTMLCanvasElement}
+   */
+  var c;
+
+  /**
+   * Width of the canvas
+   * @type {number}
+   */
+  var w;
+
+  /**
+   * Height of the canvas
+   * @type {number}
+   */
+  var h;
+
+  /**
+   * Plucking sound
+   * @type {Howl}
+   */
+  var sound;
+
+  /**
+   * The plucking string
+   * @type {paper.Path}
+   */
+  var line;
+
+  /**
    * Fires when Paper's built in resize alters the canvas size.
    * Fixes the coordinate system and redraws the line.
   */
-  function resizeHandler(event) {
+  var resizeHandler = _.debounce(function (event) {
     updateBounds();
 
-    paper.view.viewSize = [w, h];
+    paper.view.viewSize = new paper.Size(w, h);
 
     line.strokeWidth = h / 115.0 * 5.0;
 
-    line.segments[0].point = [0, h/2.0];
-    line.segments[1].point = [w/2.0, h/2.0];
-    line.segments[2].point = [w, h/2.0];
+    line.segments[0].point = [0, h/2];
+    line.segments[1].point = [w/2, h/2];
+    line.segments[2].point = [w, h/2];
 
     line.segments[0].handleOut.x = w * 0.15;
     line.segments[1].handleIn.x = w * -0.2;
     line.segments[1].handleOut.x = w * 0.2;
     line.segments[2].handleIn.x = w * -0.15;
-  }
-  var debounceResizeHandler = _.debounce(resizeHandler, 30);
+
+    paper.view.draw();
+  }, 30);
 
   /**
   * Event listener for mouse movements. Determines whether to grab or release the line.
@@ -41,14 +83,14 @@ function pluckString(options) {
       endVibration();
       line.segments[1].point.y = event.point.y;
     } else {
-      debounceReleaseString();
+      releaseString();
     }
   }
 
   /**
   * Set the string in motion and play the appropriate sound.
   */
-  function releaseString(event) {
+  var releaseString = _.throttle(function (event) {
     if (line.segments[1].point.y !== h/2 && !paper.view.responds('frame')) {
       // Play the sound
       var amplitude = (Math.abs(line.segments[1].point.y - (h/2))) / (h/2);
@@ -64,23 +106,22 @@ function pluckString(options) {
       }
 
       // Set the string in motion
-      paper.view.attach('frame', vibrateString);
+      paper.view.on('frame', vibrateString);
     }
-  }
-  var debounceReleaseString = _.debounce(releaseString, 30);
+  }, 30);
 
   /**
   * Stop all sounds and end any motion.
   */
   function endVibration() {
     sound.stop();
-    paper.view.detach('frame', vibrateString);
+    paper.view.off('frame', vibrateString);
   }
 
   /**
   * Simulate the vibration of the string. Event handler for onFrame.
   */
-  var vibrateString = _.throttle(function (event) {
+  function vibrateString(event) {
     var amplitude = Math.abs(line.segments[1].point.y - (h/2));
     if (amplitude > 1) {
       // Move the closer to the center
@@ -91,7 +132,7 @@ function pluckString(options) {
 
       endVibration();
     }
-  }, 16);
+  }
 
   /**
   * Set the global coordinate vars.
@@ -101,59 +142,61 @@ function pluckString(options) {
     h = _.isFunction(options.height) ? options.height() : options.height;
   }
 
-  // Load up the DOM elements we will need
-  var c = document.getElementById(options.elementId);
+  /**
+   * Should run once to set up the plucking string
+   */
+  function init() {
+    // Load up the DOM elements we will need
+    c = document.getElementById(options.elementId);
 
-  // Set default parameters
-  var constants = {
-    FRICTION: 0.94,
-    HANDLE_SIZE: 10,
-    SHORT_SOUND_THRESHOLD: 0.25,
-    MIN_VOLUME: 0.3
-  };
+    // Default value for scriptPath
+    if (_.isUndefined(options.scriptPath))
+      options.scriptPath = '';
 
-  if (_.isUndefined(options.scriptPath))
-    options.scriptPath = '';
+    // Set up Howler.js
+    sound = new Howl({
+      urls: [
+        options.scriptPath + 'sounds/pluck.ogg',
+        options.scriptPath + 'sounds/pluck.mp3',
+        options.scriptPath + 'sounds/pluck.wav'
+      ],
+      sprite: {
+        short: [0, 672],
+        long: [800, 2133]
+      }
+    });
 
-  // Set up Howler.js
-  var sound = new Howl({
-    urls: [
-      options.scriptPath + 'sounds/pluck.ogg',
-      options.scriptPath + 'sounds/pluck.mp3',
-      options.scriptPath + 'sounds/pluck.wav'
-    ],
-    sprite: {
-      short: [0, 672],
-      long: [800, 2133]
-    }
-  });
+    // Set up Paper.js
+    paper.setup(c);
+    paper.project.currentStyle = {
+      strokeColor: 'black'
+    };
 
-  // Set up Paper.js
-  paper.setup(c);
-  paper.project.currentStyle = {
-    strokeColor: 'black'
-  };
+    // Set up coordinates
+    updateBounds();
 
-  // Set up coordinates
-  var w, h;
-  updateBounds();
+    // Initialize the line!
+    line = new paper.Path({
+      segments: [
+        [0, h/2],
+        [w/2, h/2],
+        [w, h/2]
+      ],
+      strokeWidth: h / 115.0 * 5
+    });
 
-  // Initialize the line!
-  var line = new paper.Path({
-    segments: [
-      [0, h/2.0],
-      [w/2.0, h/2.0],
-      [w, h/2.0]
-    ],
-    strokeWidth: h / 115.0 * 5.0
-  });
+    // Set up mouse
+    paper.tool = new paper.Tool();
 
-  // Initial draw
-  resizeHandler();
-  paper.view.onResize = resizeHandler;
+    // Create event listeners
+    paper.view.onResize = resizeHandler;
+    paper.tool.onMouseMove = mouseMoveHandler;
+    paper.tool.onMouseUp = releaseString;
+    c.onmouseout = releaseString;
 
-  // Set up mouse
-  paper.tool = new paper.Tool();
-  paper.tool.onMouseMove = mouseMoveHandler;
-  c.onmouseout = paper.tool.onMouseUp = debounceReleaseString;
+    // Initial draw
+    resizeHandler();
+  }
+
+  init();
 }
