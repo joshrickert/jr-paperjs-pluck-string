@@ -19,12 +19,6 @@ function pluckString(options) {
   };
 
   /**
-   * Canvas on which to render the string
-   * @type {HTMLCanvasElement}
-   */
-  var c;
-
-  /**
    * Width of the canvas
    * @type {number}
    */
@@ -143,11 +137,27 @@ function pluckString(options) {
   }
 
   /**
+   * Helper function to attach an event listener without jQuery
+   * @see http://stackoverflow.com/a/3150139
+   */
+  function addEvent(object, type, callback) {
+    if (object == null || typeof(object) == 'undefined') return;
+    if (object.addEventListener) {
+      object.addEventListener(type, callback, false);
+    } else if (object.attachEvent) {
+      object.attachEvent("on" + type, callback);
+    } else {
+      object["on"+type] = callback;
+    }
+  }
+
+  /**
    * Should run once to set up the plucking string
    */
   function init() {
     // Load up the DOM elements we will need
-    c = document.getElementById(options.elementId);
+    var canvas = document.getElementById(options.elementId);
+    if (!canvas) return;
 
     // Default value for scriptPath
     if (_.isUndefined(options.scriptPath))
@@ -167,7 +177,7 @@ function pluckString(options) {
     });
 
     // Set up Paper.js
-    paper.setup(c);
+    paper.setup(canvas);
     paper.project.currentStyle = {
       strokeColor: 'black'
     };
@@ -192,7 +202,8 @@ function pluckString(options) {
     paper.view.onResize = resizeHandler;
     paper.tool.onMouseMove = mouseMoveHandler;
     paper.tool.onMouseUp = releaseString;
-    c.onmouseout = releaseString;
+    addEvent(canvas, 'mouseout', releaseString);
+    addEvent(window, 'resize', resizeHandler);
 
     // Initial draw
     resizeHandler();
