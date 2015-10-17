@@ -6,7 +6,8 @@
     "Josh Rickert <rickertjosh@gmail.com>"
   ],
   "description": "HTML5 plucking string based on Paper.js",
-  "main": "js/plucking.js",
+  "main": "pluck.js",
+  "moduleType": "globals",
   "keywords": [
     "paperjs",
     "string",
