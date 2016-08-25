@@ -1,6 +1,6 @@
 {
   "name": "jr-paperjs-pluck-string",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "homepage": "https://github.com/joshrickert/pluck",
   "authors": [
     "Josh Rickert <rickertjosh@gmail.com>"
@@ -28,7 +28,7 @@
   "dependencies": {
     "paper": "~0.9.23",
     "howler": "~1.1.26",
-    "lodash": "~3.10.0"
+    "lodash": "3.10.1"
   },
   "devDependencies": {
     "jquery": "~2.1.4"
