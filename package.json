@@ -1,6 +1,6 @@
 {
   "name": "jr-paperjs-pluck-string",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "HTML5 plucking string based on Paper.js",
   "main": "pluck.js",
   "repository": {
