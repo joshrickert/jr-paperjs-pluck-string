@@ -54,7 +54,7 @@ function pluckString(options) {
    * Fires when Paper's built in resize alters the canvas size.
    * Fixes the coordinate system and redraws the line.
   */
-  var resizeHandler = _.debounce(function (event) {
+  var draw = _.debounce(function (event) {
     updateBounds();
 
     paper.view.viewSize = new paper.Size(w, h);
@@ -207,14 +207,14 @@ function pluckString(options) {
     paper.tool = new paper.Tool();
 
     // Create event listeners
-    paper.view.onResize = resizeHandler;
+    paper.view.onResize = draw;
     paper.tool.onMouseMove = mouseMoveHandler;
     paper.tool.onMouseUp = releaseString;
     addEvent(canvas, 'mouseout', releaseString);
-    addEvent(window, 'resize', resizeHandler);
+    addEvent(window, 'resize', draw);
 
     // Initial draw
-    resizeHandler();
+    draw();
   }
 
   init();
