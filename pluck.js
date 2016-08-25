@@ -173,7 +173,7 @@ function pluckString(options) {
 
     // Set up Howler.js
     sound = new Howl({
-      urls: [
+      src: [
         options.scriptPath + 'sounds/pluck.ogg',
         options.scriptPath + 'sounds/pluck.mp3',
         options.scriptPath + 'sounds/pluck.wav'
