@@ -11,5 +11,5 @@ Installation
 ------------
 
 ```shell
-bower install https://github.com/joshrickert/jr-paperjs-pluck-string
+npm install https://github.com/joshrickert/jr-paperjs-pluck-string
 ```
