@@ -1,6 +1,14 @@
+(function(root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory(require('paper'), require('howler').Howl, require('lodash'));
+  } else {
+    root.pluckString = factory(root.paper, root.Howl, root._);
+  }
+}(this, function(paper, Howl, _) {
+
 /**
  * @param {object} options
- * @param {string} options.elementId - ID of the canvas DOM element on which to initiate the plucking string
+ * @param {HTMLCanvasElement} options.element - Canvas DOM element on which to initiate the plucking string
  * @param {number|function} options.width - Width of the container, or a callback for determining the width of the container
  * @param {number|function} options.height - Height of the container, or a callback for determining the height of the container
  * @param {string} options.scriptPath - URL or path from compiled client-side JS to this package, for loading sounds,
@@ -156,7 +164,7 @@ function pluckString(options) {
    */
   function init() {
     // Load up the DOM elements we will need
-    var canvas = document.getElementById(options.elementId);
+    var canvas = options.element;
     if (!canvas) return;
 
     // Default value for scriptPath
@@ -211,3 +219,7 @@ function pluckString(options) {
 
   init();
 }
+
+return pluckString;
+
+}));

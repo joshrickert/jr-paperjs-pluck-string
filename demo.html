@@ -2,10 +2,9 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <script type="text/javascript" src="bower_components/jquery/dist/jquery.js"></script>
-    <script type="text/javascript" src="bower_components/howler/howler.js"></script>
-    <script type="text/javascript" src="bower_components/paper/dist/paper-core.js"></script>
-    <script type="text/javascript" src="bower_components/lodash/lodash.js"></script>
+    <script type="text/javascript" src="node_modules/howler/dist/howler.js"></script>
+    <script type="text/javascript" src="node_modules/paper/dist/paper-core.js"></script>
+    <script type="text/javascript" src="node_modules/lodash/lodash.js"></script>
     <script type="text/javascript" src="pluck.js"></script>
 
     <style>
@@ -16,18 +15,6 @@
         margin-top:100px;
       }
     </style>
-
-    <script type="text/javascript">
-      $(function() {
-        pluckString({
-          elementId: 'pluck-canvas',
-          width: function() {
-            return 635;
-          },
-          height: 155
-        });
-      });
-    </script>
     
     <title>Pluck</title>
   </head>
@@ -36,5 +23,15 @@
     <div class="container">
       <canvas id="pluck-canvas" width="635" height="115"></canvas>
     </div>
+
+    <script type="text/javascript">
+      pluckString({
+        element: document.getElementById('pluck-canvas'),
+        width: function() {
+          return 635;
+        },
+        height: 155
+      });
+    </script>
   </body>
 </html>
