@@ -25,9 +25,9 @@
   "homepage": "https://github.com/joshrickert/pluck#readme",
   "dependencies": {
     "add-dom-event-listener": "^1.0.2",
-    "howler": "^2.0.0",
-    "lodash": "^4.15.0",
-    "paper": "^0.10.2"
+    "howler": "^2.0.4",
+    "lodash": "^4.17.4",
+    "paper": "^0.11.4"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",
