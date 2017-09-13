@@ -5,7 +5,11 @@ Pluck a guitar-like string using JavaScript.
 
 Renders on HTML5 canvas using Paper.js.
 
-See [demo.html](demo.html) for an example.
+Requires webpack or a similar module bundler that supports `mp3`, `ogg`, `wav`, and ES2015.
+
+Demo
+----
+Run `webpack` and open `demo/index.html`.
 
 Installation
 ------------
