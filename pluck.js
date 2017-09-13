@@ -1,182 +1,140 @@
-(function(root, factory) {
-  if (typeof module === 'object' && module.exports) {
-    module.exports = factory(require('paper'), require('howler').Howl, require('lodash'));
-  } else {
-    root.pluckString = factory(root.paper, root.Howl, root._);
-  }
-}(this, function(paper, Howl, _) {
+'use strict';
+
+const paper = require('paper');
+const Howl = require('howler').Howl;
+const debounce = require('lodash/debounce');
+const throttle = require('lodash/throttle');
+const isFunction = require('lodash/isFunction');
+const addEventListener = require('add-dom-event-listener');
 
 /**
- * @param {object} options
- * @param {HTMLCanvasElement} options.element - Canvas DOM element on which to initiate the plucking string
- * @param {number|function} options.width - Width of the container, or a callback for determining the width of the container
- * @param {number|function} options.height - Height of the container, or a callback for determining the height of the container
- * @param {string} options.scriptPath - URL or path from compiled client-side JS to this package, for loading sounds,
- *   with a trailing slash.
+ * Renders an interactive musical string on a canvas.
+ * @property {number} _w Width of the canvas
+ * @property {number} _h Height of the canvas
+ * @property {Howl} _sound Plucking sound
+ * @property {paper.Path} _line The plucking string
  */
-function pluckString(options) {
+module.exports = class PluckString {
   /**
-   * Physics and UI constants
-   * @type {Object}
+   * @param {object} options
+   * @param {HTMLCanvasElement} options.element - Canvas DOM element on which to initiate the plucking string
+   * @param {number|function} options.width - Width of the container, or a callback for determining the width of the container
+   * @param {number|function} options.height - Height of the container, or a callback for determining the height of the container
    */
-  var constants = {
-    FRICTION: 0.94,
-    HANDLE_SIZE: 10,
-    SHORT_SOUND_THRESHOLD: 0.25,
-    MIN_VOLUME: 0.3
-  };
+  constructor(options) {
+    ///////////////
+    // Constants //
+    ///////////////
 
-  /**
-   * Width of the canvas
-   * @type {number}
-   */
-  var w;
+    /**
+     * The factor by which the vibration decreases each animation frame
+     * @constant {number}
+     */
+    this.FRICTION = 0.94;
 
-  /**
-   * Height of the canvas
-   * @type {number}
-   */
-  var h;
+    /**
+     * Size in pixels of the area that can be grabbed by the mouse
+     * @constant (number)
+     */
+    this.HANDLE_SIZE = 10;
 
-  /**
-   * Plucking sound
-   * @type {Howl}
-   */
-  var sound;
+    /**
+     * Amplitude (0-1) under which the "short" sound sprite is played
+     * @constant (number)
+     */
+    this.SHORT_SOUND_THRESHOLD = 0.25;
 
-  /**
-   * The plucking string
-   * @type {paper.Path}
-   */
-  var line;
+    /**
+     * Sound volume is proportional to amplitude, but not under this amplitude (0-1)
+     * @constant {number}
+     */
+    this.MIN_VOLUME = 0.3;
 
-  /**
-   * Fires when Paper's built in resize alters the canvas size.
-   * Fixes the coordinate system and redraws the line.
-  */
-  var draw = _.debounce(function (event) {
-    updateBounds();
+    ////////////////////////////
+    // Create dynamic methods //
+    ////////////////////////////
 
-    paper.view.viewSize = new paper.Size(w, h);
+    /**
+     * Fires when Paper's built in resize alters the canvas size.
+     * Fixes the coordinate system and redraws the line.
+     * @param {paper.Event} event
+     */
+    this._draw = debounce(event => {
+      this._updateBounds();
 
-    line.strokeWidth = h / 115.0 * 5.0;
+      paper.view.viewSize = new paper.Size(this._w, this._h);
 
-    line.segments[0].point = [0, h/2];
-    line.segments[1].point = [w/2, h/2];
-    line.segments[2].point = [w, h/2];
+      this._line.strokeWidth = this._h / 115.0 * 5.0;
 
-    line.segments[0].handleOut.x = w * 0.15;
-    line.segments[1].handleIn.x = w * -0.2;
-    line.segments[1].handleOut.x = w * 0.2;
-    line.segments[2].handleIn.x = w * -0.15;
+      this._line.segments[0].point = [ 0,         this._h/2 ];
+      this._line.segments[1].point = [ this._w/2, this._h/2 ];
+      this._line.segments[2].point = [ this._w,   this._h/2 ];
 
-    paper.view.draw();
-  }, 30);
+      this._line.segments[0].handleOut.x = this._w * 0.15;
+      this._line.segments[1].handleIn.x =  this._w * -0.2;
+      this._line.segments[1].handleOut.x = this._w * 0.2;
+      this._line.segments[2].handleIn.x =  this._w * -0.15;
 
-  /**
-  * Event listener for mouse movements. Determines whether to grab or release the line.
-  */
-  function mouseMoveHandler(event) {
-    if(event.point.y > line.strokeWidth &&
-    event.point.y < h - line.strokeWidth &&
-    event.point.x > w * 0.15 &&
-    event.point.x < w * 0.85 &&
-    Math.abs(event.point.y - line.segments[1].point.y) < constants.HANDLE_SIZE) {
-      endVibration();
-      line.segments[1].point.y = event.point.y;
-    } else {
-      releaseString();
-    }
-  }
+      paper.view.draw();
+    }, 30);
 
-  /**
-  * Set the string in motion and play the appropriate sound.
-  */
-  var releaseString = _.throttle(function (event) {
-    if (line.segments[1].point.y !== h/2 && !paper.view.responds('frame')) {
-      // Play the sound
-      var amplitude = (Math.abs(line.segments[1].point.y - (h/2))) / (h/2);
+    this._vibrateStringBound = this._vibrateString.bind(this); // JavaScript: The Good Parts
 
-      // Give it an appropriate volume level
-      sound.volume = (1-constants.MIN_VOLUME) * amplitude * amplitude + (constants.MIN_VOLUME);
+    /**
+     * Set the string in motion and play the appropriate sound.
+     * @param {paper.Event} event
+     */
+    this._releaseString = throttle(event => {
+      const shouldPlaySound = this._line.segments[1].point.y !== this._h / 2 && !paper.view.responds('frame');
 
-      sound.stop();
-      if (amplitude < constants.SHORT_SOUND_THRESHOLD) {
-        sound.play('short');
-      } else {
-        sound.play('long');
+      if (shouldPlaySound) {
+        const amplitude = (Math.abs(this._line.segments[1].point.y - (this._h / 2))) / (this._h / 2);
+
+        // Give it an appropriate volume level
+        this._sound.volume = (1 - this.MIN_VOLUME) * amplitude * amplitude + this.MIN_VOLUME;
+
+        this._sound.stop();
+        if (amplitude < this.SHORT_SOUND_THRESHOLD) {
+          this._sound.play('short');
+        } else {
+          this._sound.play('long');
+        }
+
+        // Set the string in motion
+        paper.view.on('frame', this._vibrateStringBound);
       }
+    }, 30);
 
-      // Set the string in motion
-      paper.view.on('frame', vibrateString);
+    ////////////////
+    // Store args //
+    ////////////////
+
+    // Load up the DOM element we will need
+    const canvas = options.element;
+    if (!canvas) {
+      throw new Error('Could not initialize PluckString. Missing Canvas element.')
     }
-  }, 30);
 
-  /**
-  * Stop all sounds and end any motion.
-  */
-  function endVibration() {
-    sound.stop();
-    paper.view.off('frame', vibrateString);
-  }
-
-  /**
-  * Simulate the vibration of the string. Event handler for onFrame.
-  */
-  function vibrateString(event) {
-    var amplitude = Math.abs(line.segments[1].point.y - (h/2));
-    if (amplitude > 1) {
-      // Move the closer to the center
-      line.segments[1].point.y = 0.5 * h * (constants.FRICTION + 1) - (constants.FRICTION * line.segments[1].point.y);
-    } else {
-      // Attach the line to the center
-      line.segments[1].point.y = h/2;
-
-      endVibration();
+    this._widthOption = options.width;
+    if (!this._widthOption) {
+      throw new Error('Could not initialize PluckString. Missing width option.');
     }
-  }
 
-  /**
-  * Set the global coordinate vars.
-  */
-  function updateBounds() {
-    w = _.isFunction(options.width) ? options.width() : options.width;
-    h = _.isFunction(options.height) ? options.height() : options.height;
-  }
-
-  /**
-   * Helper function to attach an event listener without jQuery
-   * @see http://stackoverflow.com/a/3150139
-   */
-  function addEvent(object, type, callback) {
-    if (object == null || typeof(object) == 'undefined') return;
-    if (object.addEventListener) {
-      object.addEventListener(type, callback, false);
-    } else if (object.attachEvent) {
-      object.attachEvent("on" + type, callback);
-    } else {
-      object["on"+type] = callback;
+    this._heightOption = options.height;
+    if (!this._heightOption) {
+      throw new Error('Could not initialize PluckString. Missing height option.')
     }
-  }
 
-  /**
-   * Should run once to set up the plucking string
-   */
-  function init() {
-    // Load up the DOM elements we will need
-    var canvas = options.element;
-    if (!canvas) return;
-
-    // Default value for scriptPath
-    if (_.isUndefined(options.scriptPath))
-      options.scriptPath = '';
+    ////////////////
+    // Initialize //
+    ////////////////
 
     // Set up Howler.js
-    sound = new Howl({
+    this._sound = new Howl({
       src: [
-        options.scriptPath + 'sounds/pluck.ogg',
-        options.scriptPath + 'sounds/pluck.mp3',
-        options.scriptPath + 'sounds/pluck.wav'
+        require('./sounds/pluck.ogg'),
+        require('./sounds/pluck.mp3'),
+        require('./sounds/pluck.wav'),
       ],
       sprite: {
         short: [0, 672],
@@ -191,35 +149,80 @@ function pluckString(options) {
     };
 
     // Set up coordinates
-    updateBounds();
+    this._updateBounds();
 
     // Initialize the line!
-    line = new paper.Path({
+    this._line = new paper.Path({
       segments: [
-        [0, h/2],
-        [w/2, h/2],
-        [w, h/2]
+        [ 0,         this._h/2 ],
+        [ this._w/2, this._h/2 ],
+        [ this._w,   this._h/2 ]
       ],
-      strokeWidth: h / 115.0 * 5
+      strokeWidth: this._h / 115.0 * 5
     });
 
     // Set up mouse
     paper.tool = new paper.Tool();
 
     // Create event listeners
-    paper.view.onResize = draw;
-    paper.tool.onMouseMove = mouseMoveHandler;
-    paper.tool.onMouseUp = releaseString;
-    addEvent(canvas, 'mouseout', releaseString);
-    addEvent(window, 'resize', draw);
+    paper.view.onResize = this._draw.bind(this);
+    paper.tool.onMouseMove = this._mouseMoveHandler.bind(this);
+    paper.tool.onMouseUp = this._releaseString.bind(this);
+    addEventListener(canvas, 'mouseout', this._releaseString.bind(this));
+    addEventListener(window, 'resize', this._draw.bind(this));
 
     // Initial draw
-    draw();
+    this._draw();
   }
 
-  init();
-}
+  /**
+  * Refresh this._w and this._h
+  */
+  _updateBounds() {
+    this._w = isFunction(this._widthOption) ? this._widthOption() : this._widthOption;
+    this._h = isFunction(this._heightOption) ? this._heightOption() : this._heightOption;
+  }
 
-return pluckString;
+  /**
+  * Event listener for mouse movements. Determines whether to grab or release the line.
+  * @param {paper.MouseEvent} event
+  */
+  _mouseMoveHandler(event) {
+    const lineIsGrabbed = event.point.y > this._line.strokeWidth &&
+      event.point.y < this._h - this._line.strokeWidth &&
+      event.point.x > this._w * 0.15 &&
+      event.point.x < this._w * 0.85 &&
+      Math.abs(event.point.y - this._line.segments[1].point.y) < this.HANDLE_SIZE;
 
-}));
+    if (lineIsGrabbed) {
+      this._endVibration();
+      this._line.segments[1].point.y = event.point.y;
+    } else {
+      this._releaseString();
+    }
+  }
+
+  /**
+  * Stop all sounds and end any motion.
+  */
+  _endVibration() {
+    this._sound.stop();
+    paper.view.off('frame', this._vibrateStringBound);
+  }
+
+  /**
+  * Simulate the vibration of the string. Event handler for onFrame.
+  */
+  _vibrateString(event) {
+    const amplitude = Math.abs(this._line.segments[1].point.y - (this._h/2));
+    if (amplitude > 1) {
+      // Move the closer to the center
+      this._line.segments[1].point.y = 0.5 * this._h * (this.FRICTION + 1) - (this.FRICTION * this._line.segments[1].point.y);
+    } else {
+      // Attach the line to the center
+      this._line.segments[1].point.y = this._h/2;
+
+      this._endVibration();
+    }
+  }
+};
